@@ -1,4 +1,5 @@
 fastapi
 uvicorn
 requests
-ag2[gemini]
+autogen-agentchat~=0.2.36
+google-genai
