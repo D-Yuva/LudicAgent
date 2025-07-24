@@ -33,7 +33,7 @@ def receive_from_mcp(body: RelayMessage):
         
         # Generate text using Gemini
         resp = genai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-flash-lite",
             contents=body.message
         )
         reply = resp.text
