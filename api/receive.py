@@ -4,55 +4,54 @@ import requests
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
-from ag2 import ConversableAgent, LLMConfig
+from google import genai  # GemMI API client
 
-# --- App & Agent Setup ---
 app = FastAPI()
 
-# Initialize your Gemini-powered AutoGen agent
-GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
-MCP_SERVER = os.environ["MCP_SERVER"]  # e.g., https://a2-a-mcp.vercel.app
+# Initialize Gemini GenAI client
+genai_client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-llm_config = LLMConfig(
-    api_type="google",
-    api_key=GEMINI_API_KEY,
-    model="models/gemini-1.5-pro-latest"
-)
-agent = ConversableAgent(name="ludicagent", llm_config=llm_config)
+# Environment
+MCP_SERVER = os.environ["MCP_SERVER"]
 
-# --- Models ---
 class RelayMessage(BaseModel):
     session_id: str
     message: str
 
-# --- Routes ---
 @app.get("/favicon.png", include_in_schema=False)
 async def favicon():
     return PlainTextResponse(status_code=204)
+
+@app.get("/")
+def health():
+    return {"status": "alive", "agent": "ludicagent"}
 
 @app.post("/receive")
 def receive_from_mcp(body: RelayMessage):
     try:
         print("📥 Received:", body)
-        # Generate response via Gemini
-        reply = agent.generate_reply([{"role": "user", "content": body.message}])
+        
+        # Generate text using Gemini
+        resp = genai_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=body.message
+        )
+        reply = resp.text
         print("🤖 Reply:", reply)
 
-        # Flip session_id to reply back to courseagent
-        flipped = ":".join(reversed(body.session_id.split(":", 1)))
-        resp = requests.post(f"{MCP_SERVER}/relay", json={
+        # Flip session_id to route back
+        session, _ = body.session_id.split(":", 1)
+        flipped = f"{session}:courseagent"
+
+        # Relay via MCP
+        r = requests.post(f"{MCP_SERVER}/relay", json={
             "session_id": flipped,
             "message": reply
         })
-        print("📤 Replied via MCP:", resp.status_code, resp.text)
-
+        print("📤 Relayed:", r.status_code, r.text)
         return {"status": "replied", "to": flipped}
+
     except Exception as e:
-        print("‼️ Receive Error:", e)
+        print("‼️ Error in /receive:", e)
         traceback.print_exc()
         raise
-
-# Optional: root health check
-@app.get("/")
-def health():
-    return {"status": "alive", "agent": "ludicagent"}
