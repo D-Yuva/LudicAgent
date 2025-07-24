@@ -24,12 +24,17 @@ class RelayMessage(BaseModel):
 
 @app.post("/receive")
 def receive_from_mcp(body: RelayMessage):
-    input_msg = body.message
-    session_id = body.session_id
-    response = agent.generate_reply([{"role": "user", "content": input_msg}])
-    flipped = ":".join(reversed(session_id.split(":")))
-    requests.post(f"{MCP_SERVER}/relay", json={
-        "session_id": flipped,
-        "message": response
-    })
-    return {"status": "replied", "to": flipped}
+    try:
+        print("📥 Received:", body)
+        response = agent.generate_reply([{"role":"user","content":body.message}])
+        flipped = ":".join(reversed(body.session_id.split(":")))
+        resp = requests.post(f"{MCP_SERVER}/relay", json={
+            "session_id": flipped,
+            "message": response
+        })
+        print("📤 Replied via MCP:", resp.status_code, resp.text)
+        return {"status":"replied", "to": flipped}
+    except Exception as e:
+        print("‼️ /receive error:", repr(e))
+        raise
+
