@@ -1,9 +1,9 @@
 {
   "version": 2,
   "builds": [
-    { "src": "ludicagent.py", "use": "@vercel/python" }
+    { "src": "api/receive.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "ludicagent.py" }
+    { "src": "/receive", "dest": "api/receive.py" }
   ]
 }
