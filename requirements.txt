@@ -1,3 +1,6 @@
 fastapi
+uvicorn
 requests
 autogen-agentchat[gemini]
+pydantic
+python-dotenv
